@@ -2,6 +2,7 @@
 
 import ply.lex as lex
 import sys
+import os
 
 # Lista de tokens
 tokens = [
@@ -99,7 +100,10 @@ def test_lexer(file_path):
         print(tok)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Uso: python lexer_parte_b.py <caminho_do_arquivo>")
+    filename = input("Forneça o caminho para o arquivo com os tokens: ")
+    filename = os.path.expanduser(filename)
+    filename = os.path.abspath(filename)
+    if not os.path.isfile(filename):
+        print(f"Arquivo '{filename}' não encontrado.")
     else:
-        test_lexer(sys.argv[1])
+        test_lexer(filename)

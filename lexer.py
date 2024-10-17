@@ -1,126 +1,270 @@
-import sys
-
+# Bruno Vazquez Lafaiete (20102277), Guilherme Cassiano Ferreira Silva (23250871), Victor Luiz de Souza (21105576)
 class Token:
-    def __init__(self, type_, value, position):
-        self.type = type_
+    def __init__(self, tag):
+        self.tag = tag
+
+    def __str__(self):
+        return f"<{self.tag}>"
+
+class Num(Token):
+    def __init__(self, value):
+        super().__init__('NUM')
         self.value = value
-        self.position = position
 
-    def __repr__(self):
-        return f"Token(type={self.type}, value={self.value}, position={self.position})"
+    def __str__(self):
+        return f"<{self.tag}, {self.value}>"
 
-class Lexer:
-    def __init__(self, source_code):
-        self.source_code = source_code
-        self.position = 0
-        self.tokens = []
+class Word(Token):
+    def __init__(self, tag, lexeme):
+        super().__init__(tag)
+        self.lexeme = lexeme
 
-    def advance(self):
-        self.position += 1
+    def __str__(self):
+        return f"<{self.tag}, '{self.lexeme}'>"
+
+class Relop(Token):
+    def __init__(self, tag, operator):
+        super().__init__(tag)
+        self.operator = operator
+
+    def __str__(self):
+        return f"<{self.tag}, '{self.operator}'>"
+
+class ErrorToken(Token):
+    def __init__(self, message, nlin, ncol):
+        super().__init__('ERROR')
+        self.message = message
+        self.nlin = nlin
+        self.ncol = ncol
+
+    def __str__(self):
+        return f"Erro léxico na linha {self.nlin}, coluna {self.ncol}: {self.message}"
+
+class InputBuffer:
+    def __init__(self, input_data):
+        self.data = input_data
+        self.pos = 0
+        self.nlin = 1
+        self.ncol = 1
 
     def peek(self):
-        if self.position < len(self.source_code):
-            return self.source_code[self.position]
-        return None
+        if self.pos < len(self.data):
+            return self.data[self.pos]
+        else:
+            return None  #fim do arquivo
 
-    def lex(self):
-        while self.position < len(self.source_code):
-            current_char = self.peek()
+    # mesmo sentido do "get"
+    def advance(self):
+        if self.pos < len(self.data):
+            ch = self.data[self.pos]
+            self.pos += 1
+            if ch == '\n':
+                self.nlin += 1
+                self.ncol = 1
+            else:
+                self.ncol += 1
+            return ch
+        else:
+            return None  #fim do arquivo
 
-            # Ignorar espaços em branco
-            if current_char.isspace():
-                self.advance()
-                continue
+class Lexer:
+    def __init__(self, input_data):
+        self.input = InputBuffer(input_data)
+        self.words = {}
+        self.tokens = []
+        # #palavras chaves, comentadas pois nao entravam no escopo do trabalho
+        # self.reserve(Word('IF', 'if'))
+        # self.reserve(Word('THEN', 'then'))
+        # self.reserve(Word('ELSE', 'else'))
+        # self.reserve(Word('WHILE', 'while'))
+        # self.reserve(Word('DO', 'do'))
+        # self.reserve(Word('BREAK', 'break'))
+        self.p = self.input.peek()
 
-            # Identificador
-            if current_char.isalpha():
-                self.tokens.append(self.lex_identifier())
-                continue
+    def reserve(self, word):
+        self.words[word.lexeme] = word
 
-            # Constante Numérica
-            if current_char.isdigit():
-                self.tokens.append(self.lex_number())
-                continue
+    def scan(self):
+        #ao entrar, ignora o espaço em branco ou quebra de linha.
+        while True:
+            if self.p == ' ' or self.p == '\t':
+                self.input.advance()
+                self.p = self.input.peek()
+            elif self.p == '\n':
+                self.input.advance()
+                self.p = self.input.peek()
+            else:
+                break
+        if self.p is None:
+            return None  #fim do arquivo
+        if self.p in ('<', '=', '>'):
+            return self.simula_AFD_RELOPS()
+        elif self.p.isdigit():
+            return self.simula_AFD_NUMS()
+        elif self.p.isalpha():
+            return self.simula_AFD_IDS()
+        else:
+            #caracteres nao reconhecidos por RELOP, nem NUMS nem IDs
+            return self.simula_OUTRO()
 
-            # Operadores Relacionais
-            if current_char in ('<', '>', '=', '!'):
-                self.tokens.append(self.lex_relational_operator())
-                continue
+    def simula_AFD_RELOPS(self):
+        #seguindo o exemplo e o diagrama de transição de RELOPs fornecido em aula
+        state = 0
+        accept = False
+        resp = None
+        while True:
+            if state == 0:
+                if self.p == '<':
+                    self.input.advance()
+                    self.p = self.input.peek()
+                    state = 1
+                elif self.p == '=':
+                    self.input.advance()
+                    self.p = self.input.peek()
+                    state = 5
+                elif self.p == '>':
+                    self.input.advance()
+                    self.p = self.input.peek()
+                    state = 6
+                else:
+                    break
+            elif state == 1:
+                if self.p == '=':
+                    self.input.advance()
+                    self.p = self.input.peek()
+                    state = 2
+                elif self.p == '>':
+                    self.input.advance()
+                    self.p = self.input.peek()
+                    state = 3
+                elif self.p == '<':
+                    #se tiver '<<' retorna erro
+                    nlin = self.input.nlin
+                    ncol = self.input.ncol
+                    message = f"Operador inválido '<<'"
+                    return ErrorToken(message, nlin, ncol)
+                else:
+                    state = 4
+            elif state == 6:
+                if self.p == '=':
+                    self.input.advance()
+                    self.p = self.input.peek()
+                    state = 7
+                elif self.p == '>':
+                    #se tiver '>>' retorna erro
+                    nlin = self.input.nlin
+                    ncol = self.input.ncol
+                    message = f"Operador inválido '>>'"
+                    return ErrorToken(message, nlin, ncol)
+                else:
+                    state = 8
+            elif state == 2:
+                resp = Relop('RELOP', '<=')
+                accept = True
+            elif state == 3:
+                resp = Relop('RELOP', '!=')
+                accept = True
+            elif state == 4:
+                resp = Relop('RELOP', '<')
+                accept = True
+            elif state == 5:
+                resp = Relop('RELOP', '=')
+                accept = True
+            elif state == 7:
+                resp = Relop('RELOP', '>=')
+                accept = True
+            elif state == 8:
+                resp = Relop('RELOP', '>')
+                accept = True
+            if accept:
+                self.tokens.append(resp)
+                return resp
 
-            # Caractere não reconhecido
-            raise ValueError(f"Caractere não reconhecido na posição {self.position}: {current_char}")
+    def simula_AFD_NUMS(self):
+        v = 0
+        while True:
+            v = v * 10 + int(self.p)
+            self.input.advance()# consome o caractere
+            self.p = self.input.peek()# espia o proximo caractere
+            if self.p is None or not self.p.isdigit(): #se for digito volta pro laço
+                break
+        if self.p is not None and self.p.isalpha():
+            #digito seguido de caracteres nao numericos
+            nlin = self.input.nlin
+            ncol = self.input.ncol
+            message = f"Caractere inesperado '{self.p}' após número"
+            return ErrorToken(message, nlin, ncol)
+        num_token = Num(v)
+        self.tokens.append(num_token) #adiciona na lista de tokens
+        return num_token
 
+    def simula_AFD_IDS(self):
+        buf = ''
+        while True:
+            buf += self.p
+            self.input.advance() # consome o caractere
+            self.p = self.input.peek() # espia o proximo caractere
+            if self.p is None or not self.p.isalnum(): #se for numero ou digito volta pro laço
+                break
+        s = buf
+        # logica p/ verificar se ja esta presente na tabela de simbolos, senão, adiciona
+        if s in self.words:
+            token = self.words[s]
+        else:
+            token = Word('ID', s)
+            self.words[s] = token
+        self.tokens.append(token) #adiciona na lista de tokens
+        return token
+
+    def simula_OUTRO(self):
+        ch = self.p
+        nlin = self.input.nlin
+        ncol = self.input.ncol
+        message = f"Caractere inesperado '{ch}'"
+        return ErrorToken(message, nlin, ncol)
+
+    def get_tokens(self):
         return self.tokens
 
-    def lex_identifier(self):
-        start_position = self.position
-        lexeme = self.peek()
+    def get_symbol_table(self):
+        #logica para excluir as palavras chaves da tabela de simbolo, embora não estejamos utilizando
+        symbol_table = {lex.lexeme: lex for lex in self.words.values() if lex.tag == 'ID'}
+        return symbol_table
 
-        self.advance()
-        while self.peek() is not None and self.peek().isalnum():
-            lexeme += self.peek()
-            self.advance()
-
-        return Token(type_="IDENTIFIER", value=lexeme, position=start_position)
-
-    def lex_number(self):
-        start_position = self.position
-        lexeme = self.peek()
-
-        self.advance()
-        while self.peek() is not None and self.peek().isdigit():
-            lexeme += self.peek()
-            self.advance()
-
-        return Token(type_="INTEGER", value=int(lexeme), position=start_position)
-
-    def lex_relational_operator(self):
-        start_position = self.position
-        lexeme = self.peek()
-
-        self.advance()
-        if lexeme in ('<', '>') and self.peek() is not None and self.peek() == '=':
-            lexeme += self.peek()
-            self.advance()
-        elif lexeme == '!' and self.peek() is not None and self.peek() == '=':
-            lexeme += self.peek()
-            self.advance()
-
-        if lexeme not in ('<', '>', '=', '<=', '>=', '!='):
-            raise ValueError(f"Operador relacional inválido na posição {start_position}: {lexeme}")
-
-        return Token(type_="RELATIONAL_OPERATOR", value=lexeme, position=start_position)
-
-def read_file(filename):
-    """Lê o conteúdo de um arquivo e retorna como uma string."""
-    with open(filename, 'r') as file:
-        return file.read()
-
+# Função principal
 def main():
-    # Verifica se o argumento do arquivo foi passado
-    if len(sys.argv) < 2:
-        print("Uso: python lexer.py <nome_do_arquivo>")
-        sys.exit(1)
-
-    # Lê o nome do arquivo de entrada
-    input_filename = sys.argv[1]
-
+    filename = input("Forneça o caminho para o arquivo com os tokens: ")
     try:
-        # Lê o conteúdo do arquivo
-        source_code = read_file(input_filename)
-
-        # Executa o analisador léxico
-        lexer = Lexer(source_code)
-        tokens = lexer.lex()
-
-        # Imprime os tokens gerados
-        print("Tokens encontrados:")
+        with open(filename, 'r') as file:
+            input_data = file.read()
+    except FileNotFoundError:
+        print(f"Arquivo '{filename}' não encontrado.")
+        return
+    lexer = Lexer(input_data)
+    tokens = []
+    has_error = False
+    error_message = ''
+    while True:
+        token = lexer.scan()
+        if token is None:
+            break #sai do laço no fim do arquivo
+        if isinstance(token, ErrorToken):
+            has_error = True
+            error_message = str(token)
+            break #sai do laço ao existir uma mensagem de erro
+        else:
+            tokens.append(token)
+    if has_error:
+        #se tem erro printa apenas a mensagem de erro, senão printa a lista de tokens e a tabela de simbolos
+        print(error_message)
+    else:
+        print("Lista de tokens:")
         for token in tokens:
             print(token)
-    except FileNotFoundError:
-        print(f"Erro: O arquivo '{input_filename}' não foi encontrado.")
-    except ValueError as e:
-        print(f"Erro durante a análise léxica: {e}")
+        print("\nTabela de símbolos:")
+        symbol_table = lexer.get_symbol_table()
+        for lexeme, token in symbol_table.items():
+            print(f"{lexeme}: {token.tag}")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

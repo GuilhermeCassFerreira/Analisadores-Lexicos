@@ -1,4 +1,5 @@
 # Bruno Vazquez Lafaiete (20102277), Guilherme Cassiano Ferreira Silva (23250871), Victor Luiz de Souza (21105576)
+import os
 class Token:
     def __init__(self, tag):
         self.tag = tag
@@ -72,13 +73,11 @@ class Lexer:
         self.input = InputBuffer(input_data)
         self.words = {}
         self.tokens = []
-        # #palavras chaves, comentadas pois nao entravam no escopo do trabalho
-        # self.reserve(Word('IF', 'if'))
-        # self.reserve(Word('THEN', 'then'))
-        # self.reserve(Word('ELSE', 'else'))
-        # self.reserve(Word('WHILE', 'while'))
-        # self.reserve(Word('DO', 'do'))
-        # self.reserve(Word('BREAK', 'break'))
+        # considera IF, THEN e ELSE como palavras reservadas
+        self.reserve(Word('IF', 'if'))
+        self.reserve(Word('THEN', 'then'))
+        self.reserve(Word('ELSE', 'else'))
+
         self.p = self.input.peek()
 
     def reserve(self, word):
@@ -227,12 +226,14 @@ class Lexer:
         return self.tokens
 
     def get_symbol_table(self):
-        #logica para excluir as palavras chaves da tabela de simbolo, embora não estejamos utilizando
+        #logica para excluir as palavras chaves da tabela de simbolo
         symbol_table = {lex.lexeme: lex for lex in self.words.values() if lex.tag == 'ID'}
         return symbol_table
 
 def main():
     filename = input("Forneça o caminho para o arquivo com os tokens: ")
+    filename = os.path.expanduser(filename)
+    filename = os.path.abspath(filename)
     try:
         with open(filename, 'r') as file:
             input_data = file.read()

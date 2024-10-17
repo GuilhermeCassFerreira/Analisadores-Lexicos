@@ -25,6 +25,11 @@ Este programa é um analisador léxico que utiliza a biblioteca PLY (Python Lex-
    python3 --version
    ```
 
+## Instruções para instalar o PLY (Python Lex-Yacc)
+   ```bash
+   pip install ply
+   ```
+
 ## Instruções de Execução
 
 1. Abra o terminal.

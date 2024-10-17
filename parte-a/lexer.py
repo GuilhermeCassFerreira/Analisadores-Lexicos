@@ -231,7 +231,6 @@ class Lexer:
         symbol_table = {lex.lexeme: lex for lex in self.words.values() if lex.tag == 'ID'}
         return symbol_table
 
-# Função principal
 def main():
     filename = input("Forneça o caminho para o arquivo com os tokens: ")
     try:

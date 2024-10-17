@@ -1,7 +1,6 @@
-# lexer.py
 import ply.lex as lex
 
-# Lista de tokens da gramática X++
+# Lista de tokens
 tokens = [
     'ID', 'INT', 'FLOAT', 'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 
     'LPAREN', 'RPAREN', 'LBRACE', 'RBRACE', 'SEMI', 'COMMA',
@@ -19,18 +18,28 @@ reserved = {
     'return': 'RETURN',
 }
 
-# Regras para tokens simples
-t_PLUS = r'\+'
-t_MINUS = r'-'
-t_TIMES = r'\*'
-t_DIVIDE = r'/'
-t_LPAREN = r'\('
-t_RPAREN = r'\)'
-t_LBRACE = r'\{'
-t_RBRACE = r'\}'
-t_SEMI = r';'
-t_COMMA = r','
-t_ASSIGN = r'='
+t_PLUS     = r'\+'
+t_MINUS    = r'-'
+t_TIMES    = r'\*'
+t_DIVIDE   = r'/'
+t_RCOLC    = r'\]'
+t_LCOLC	   = r'\['
+t_LPAREN   = r'\('
+t_RPAREN   = r'\)'
+t_LBRACE   = r'\{'
+t_RBRACE   = r'\}'
+t_SEMI     = r';'
+t_COMMA    = r','
+t_ASSIGN   = r'='
+t_OR 	   = r'\|\|'
+t_AND	   = r'&&'
+t_EQUALS   = r'=='
+t_DIFF	   = r'!='
+t_MENOR	   = r'<'
+t_MAIOR	   = r'>'
+t_MENOREQUALS	= r'<='
+t_MAIOREQUALS 	= r'>='
+
 
 # Regra para números
 def t_NUMBER(t):

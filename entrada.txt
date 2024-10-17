@@ -1,6 +1,6 @@
 int x;
 float y;
 x = 3 +;
-if (x > y) {
+if @(x > y) {
     return x;
 }
